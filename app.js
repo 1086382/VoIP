@@ -24,35 +24,20 @@ app.use(compression())
   }
 });
 
-// TEMP diagnostic: log every incoming request before any routing/auth, so
-// nothing can go unlogged while tracking down a request that isn't reaching
-// any of the normal route handlers.
-app.use((req, res, next) => {
-  console.log(`>>> INCOMING ${req.method} ${req.originalUrl} from ${req.ip}`);
-  next();
-});
-
-var expiryDate = new Date(Date.now() + 60 * 60 * (1000 * 12 * 30)) // 30 day
+const secureCookies = process.env.HTTPS.trim() === 'true';
 app.use(session({
   name: 'session',
   keys: [process.env.COOKIE_KEY, process.env.COOKIE_KEY2],
-  cookie: {
-    secure: true,
-    httpOnly: true,
-    expires: expiryDate
-  }
-}))
+  secure: secureCookies,
+  httpOnly: true,
+  sameSite: 'lax',
+  maxAge: 30 * 24 * 60 * 60 * 1000
+}));
 
-let setCache = function (req, res, next) {
-  const period = 60 * 60 * 24
-  if (req.method == 'GET') {
-    res.set('Cache-control', `public, max-age=${period}`)
-  } else {
-    res.set('Cache-control', `no-store`)
-  }
-  next()
-}
-app.use(setCache)
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 
 var RateLimit = require('express-rate-limit');
 const helmet = require("helmet");
@@ -105,17 +90,22 @@ var limiter = new RateLimit({
   
 // apply rate limiter to all requests
 app.use(limiter);
-io.on('connection', socket => {
-  console.log('a user connected');
-  socket.on('join_channel', (channel) => {
-    console.log(`${channel} user joined channel`);
-    socket.join(channel);
-  });
-  socket.on('join_profile_channel', (channel) => {
-    console.log(`${channel} user joined channel`);
-    socket.join(channel);
-  });
+const jwt = require('jsonwebtoken');
+io.use((socket, next) => {
+  try {
+    const claims = jwt.verify(socket.handshake.auth.token, process.env.COOKIE_KEY, {
+      algorithms: ['HS256']
+    });
+    if (typeof claims.id !== 'string' || !claims.id || claims.purpose !== 'session') {
+      return next(new Error('Unauthorized'));
+    }
+    socket.data.userId = claims.id;
+    next();
+  } catch {
+    next(new Error('Unauthorized'));
+  }
 });
+io.on('connection', (socket) => socket.join(socket.data.userId));
 
 app.use('/frontend/dist/index.html', express.static('frontend/dist/index.html'));
 app.use('/version.md', express.static('version.md'));
@@ -151,8 +141,7 @@ if( process.env.HTTPS.trim() === 'true'){
 // signatures are computed over the exact bytes sent, so the re-serialized
 // req.body wouldn't reliably match.
 app.use(bodyParser.json({
-  limit: '500mb',
-  parameterLimit: 10000000,
+  limit: '8mb',
   verify: (req, res, buf) => { req.rawBody = buf; },
 }));
 
@@ -163,8 +152,8 @@ app.use(bodyParser.json({
 // the same as its JSON Call Control webhooks.
 app.use(bodyParser.urlencoded({
   extended: true,
-  limit: '500mb',
-  parameterLimit: 10000000,
+  limit: '1mb',
+  parameterLimit: 1000,
   verify: (req, res, buf) => { req.rawBody = buf; },
 }));
 app.use('/uploads', express.static('uploads'));
@@ -207,4 +196,4 @@ app.get(`/:id/:name`, function (req, res) {
   res.sendFile(path.join(__dirname, './frontend/dist/index.html'));
 })
 
-server.listen(process.env.PORT)
+server.listen(Number(process.env.PORT), process.env.HOST || '0.0.0.0')

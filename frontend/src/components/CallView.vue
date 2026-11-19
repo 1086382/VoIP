@@ -1,8 +1,8 @@
 <template>
     <div>
-        <b-button id="incomingCallModel" v-b-modal.modal-tall style="display:none">Launch demo modal</b-button>
-        <b-modal ref="modalTall" class="test-modal" id="modal-tall" hide-footer>
-          <template #modal-header="{ close }">
+        <b-button id="incomingCallModel" v-b-modal="'modal-tall'"  style="display:none">Launch demo modal</b-button>
+        <b-modal ref="modalTall" class="test-modal" id="modal-tall" no-footer>
+          <template #header="{ close }">
             <!-- Emulate built in modal header close button action -->
             <b-button v-bind:class="{ 'd-none': connection }" size="sm" variant="outline-danger" @click="close()">
               Close
@@ -163,10 +163,11 @@
 <script>
 // import Swal from 'sweetalert2'
 import { post } from '../core/module/common.module'
-import { EventBus } from '@/event-bus'
+import { listenToAppEvent } from '@/event-bus'
 import { TelnyxRTC } from '@telnyx/webrtc'
 import 'vue-select/dist/vue-select.css'
-const { Device } = require('twilio-client')
+import 'twilio-client/dist/twilio.js'
+const { Device } = window.Twilio
 export default {
   props: ['contacts'],
   data () {
@@ -189,10 +190,10 @@ export default {
   async mounted () {
     this.formatecontact(this.contacts)
     // console.log(this.contacts)
-    EventBus.$on('clicked', () => {
+    listenToAppEvent('clicked', () => {
       // this.clickHandler()
     })
-    // EventBus.$on('clicked', this.clickHandler)
+    // listenToAppEvent('clicked', this.clickHandler)
     var tokenData = await this.getToken()
     this.call_text = 'get token'
     this.deviceSetup(tokenData)
@@ -281,6 +282,7 @@ export default {
       this.getSetting()
     },
     getToken () {
+      if (!this.$cookie.get("access_token")) return Promise.resolve(false)
       return new Promise(resolve => {
         var profileLocal = JSON.parse(localStorage.getItem('activeProfile'))
         if (profileLocal) {
@@ -293,12 +295,14 @@ export default {
           this.$store
             .dispatch(post, request)
             .then((response) => {
-              resolve(response.data)
+              resolve(response?.data ?? false)
             })
             .catch((e) => {
               console.log(e)
               resolve(false)
             })
+        } else {
+          resolve(false)
         }
       })
     },
@@ -485,7 +489,7 @@ export default {
       this.formatecontact(newVal)
     }
   },
-  beforeDestroy: function () {
+  beforeUnmount: function () {
     var profileLocal = JSON.parse(localStorage.getItem('activeProfile'))
     if (profileLocal) {
       if (profileLocal.type === 'telnyx') {

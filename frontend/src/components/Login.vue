@@ -6,26 +6,26 @@
           <form @submit.prevent="handleSubmit" class="ml-2 mr-2" v-if="!otpScreen && !keyScreen">
             <div class="form-group mt-4">
               <b-input-group>
-                <b-input-group-prepend is-text>
+                <b-input-group-text>
                   <b-icon icon="person-fill"></b-icon>
-                </b-input-group-prepend>
-              <input class="form-control chat-input" type="text" placeholder="Username" v-model="user.email" :class="{ 'is-invalid': submitted && $v.user.email.$error }" title="Enter Username">
+                </b-input-group-text>
+              <input class="form-control chat-input" type="text" placeholder="Username" v-model="user.email" :class="{ 'is-invalid': submitted && v$.user.email.$error }" title="Enter Username">
                </b-input-group>
-              <div v-if="submitted && $v.user.email.$error" class="invalid-feedback">
-                <span v-if="!$v.user.email.required">Username is required</span>
-                <span v-if="!$v.user.email.minLength">Username is invalid</span>
+              <div v-if="submitted && v$.user.email.$error" class="invalid-feedback">
+                <span v-if="v$.user.email.required.$invalid">Username is required</span>
+                <span v-if="v$.user.email.minLength.$invalid">Username is invalid</span>
               </div>
             </div>
             <div class="form-group mb-2 mt-4">
               <b-input-group>
-                <b-input-group-prepend is-text>
+                <b-input-group-text>
                   <b-icon icon="shield-lock"></b-icon>
-                </b-input-group-prepend>
-              <input class="chat-input form-control" v-model="user.password"  type="password" placeholder="Password" :class="{ 'is-invalid': submitted && $v.user.password.$error }" title="Enter Password">
+                </b-input-group-text>
+              <input class="chat-input form-control" v-model="user.password"  type="password" placeholder="Password" :class="{ 'is-invalid': submitted && v$.user.password.$error }" title="Enter Password">
              </b-input-group>
-              <div v-if="submitted && $v.user.password.$error" class="invalid-feedback">
-                  <span v-if="!$v.user.password.required">Password is required</span>
-                  <span v-if="!$v.user.password.minLength">Password is invalid</span>
+              <div v-if="submitted && v$.user.password.$error" class="invalid-feedback">
+                  <span v-if="v$.user.password.required.$invalid">Password is required</span>
+                  <span v-if="v$.user.password.minLength.$invalid">Password is invalid</span>
               </div>
             </div>
             <div class="d-grid">
@@ -120,14 +120,16 @@
 </template>
 
 <script>
+import useVuelidate from '@vuelidate/core'
 // import { decode } from '../../../base64url-arraybuffer'
 import { decode, encode } from '../base64url-arraybuffer'
 import { post } from '../core/module/common.module'
 import ThemeButton from '@/components/ThemeButton.vue'
-import { required, minLength } from 'vuelidate/lib/validators'
+import { required, minLength } from '@vuelidate/validators'
 // import { constants } from 'zlib'
-// const CBOR = require('cbor-js')
+// import CBOR from 'cbor-js'
 export default {
+  setup() { return { v$: useVuelidate() } },
 name: 'Login',
 components: { ThemeButton },
 data () {
@@ -252,8 +254,8 @@ methods: {
   handleSubmit (e) {
     e.preventDefault()
     this.submitted = true
-    this.$v.$touch()
-    if (this.$v.$invalid) {
+    this.v$.$touch()
+    if (this.v$.$invalid) {
       return
     }
 
@@ -390,7 +392,7 @@ methods: {
     this.submitted2 = true
     if (this.otpForm.otp.trim() !== '') {
       var request = {
-        data: { user: this.activeUser.user._id, verification_code: this.otpForm.otp },
+        data: { challenge: this.activeUser.token, verification_code: this.otpForm.otp },
         url: 'auth/otp-verify'
       }
       this.$store
@@ -398,7 +400,7 @@ methods: {
         .then((response) => {
           if (response) {
             if (response.status === 'true') {
-              this.$cookie.set('access_token', this.activeUser.token, 30)
+              this.$cookie.set('access_token', response.token, 30)
               this.$cookie.set('userdata', JSON.stringify(this.activeUser.user), 30)
               this.activeUser.token = ''
               this.activeUser.user = null

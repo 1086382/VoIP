@@ -12,7 +12,7 @@
 
 <script>
 import TwilioSetting from './call/twilio/TwilioSetting.vue'
-import { EventBus } from '@/event-bus'
+import { listenToAppEvent } from '@/event-bus'
 import TelnyxSetting from './call/telnyx/TelnyxSetting.vue'
 import MessageSetting from './call/telnyx/MessageSetting.vue'
 import TwimlSetting from './call/twilio/TwimlSetting.vue'
@@ -26,7 +26,7 @@ export default {
   },
   mounted: function () {
     console.log('load data')
-    EventBus.$on('changeProfile', this.getCallSetting)
+    listenToAppEvent('changeProfile', this.getCallSetting)
     this.getCallSetting()
   },
   methods: {

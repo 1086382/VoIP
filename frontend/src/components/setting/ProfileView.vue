@@ -26,20 +26,20 @@
       </b-dropdown-item-button>
       <b-dropdown-divider></b-dropdown-divider>
     </div>
-    <b-dropdown-item-button v-b-modal.add-profile>
+    <b-dropdown-item-button v-b-modal="'add-profile'" >
       <b-icon icon="person-plus-fill" aria-hidden="true"></b-icon>
         Add New Profile
     </b-dropdown-item-button>
     <b-dropdown-divider></b-dropdown-divider>
     <!--</router-link>-->
     <!-- modal -->
-    <b-modal ref="add-profile" id="add-profile" size="lg" title="Add Profile" hide-footer>
+    <b-modal ref="add-profile" id="add-profile" size="lg" title="Add Profile" no-footer>
       <span class="small text-secondary">Profile</span>
       <form @submit.prevent="handleSubmit" class="ml-2 mr-2">
         <div class="form-group mt-2">
-          <input class="form-control chat-input" v-model="form.profile" name="profile" placeholder="Enter Profile" :class="{ 'is-invalid': submitted3 && $v.form.profile.$error }" />
-          <div v-if="submitted3 && $v.form.profile.$error" class="invalid-feedback">
-            <span v-if="!$v.form.profile.required">Profile are required</span>
+          <input class="form-control chat-input" v-model="form.profile" name="profile" placeholder="Enter Profile" :class="{ 'is-invalid': submitted3 && v$.form.profile.$error }" />
+          <div v-if="submitted3 && v$.form.profile.$error" class="invalid-feedback">
+            <span v-if="v$.form.profile.required.$invalid">Profile are required</span>
           </div>
         </div>
         <div class="d-grid d-md-flex mt-3">
@@ -52,10 +52,12 @@
 </template>
 
 <script>
-import { required } from 'vuelidate/lib/validators'
+import useVuelidate from '@vuelidate/core'
+import { required } from '@vuelidate/validators'
 import { post } from '../../core/module/common.module'
 import { EventBus } from '@/event-bus'
 export default {
+  setup() { return { v$: useVuelidate() } },
   data () {
     return {
       access_token: null,
@@ -97,10 +99,10 @@ export default {
       this.activeProfile = profile
       localStorage.setItem('activeProfile', JSON.stringify(profile))
       this.$emit('clicked', profile)
-      EventBus.$emit('clicked', true)
-      EventBus.$emit('changeProfile', true)
-      EventBus.$emit('getOneProfile', true)
-      // EventBus.$emit('changeProfile', true)
+      EventBus.emit('clicked', true)
+      EventBus.emit('changeProfile', true)
+      EventBus.emit('getOneProfile', true)
+      // EventBus.emit('changeProfile', true)
     },
     activeFirstProfile () {
       if (this.profiles.length > 0) {
@@ -121,25 +123,15 @@ export default {
           if (response) {
             this.profiles = response.data
             if (!this.activeProfile) {
-              var profileLocal = localStorage.getItem('activeProfile')
-              if (profileLocal) {
-                var acPr = JSON.parse(profileLocal)
-                if (acPr) {
-                  for (var i = 0; i < this.profiles.length; i++) {
-                    if (this.profiles[i]._id === acPr._id) {
-                      this.activeProfile = this.profiles[i]
-                      EventBus.$emit('changeProfile2', true)
-                    }
-                  }
-                } else {
-                  localStorage.setItem('activeProfile', JSON.stringify(this.profiles[0]))
-                  this.activeProfile = this.profiles[0]
-                  EventBus.$emit('changeProfile2', true)
-                }
+              const saved = localStorage.getItem('activeProfile')
+              const previous = saved && saved !== 'undefined' ? JSON.parse(saved) : null
+              this.activeProfile = this.profiles.find(profile => profile._id === previous?._id)
+                ?? this.profiles[0] ?? null
+              if (this.activeProfile) {
+                localStorage.setItem('activeProfile', JSON.stringify(this.activeProfile))
+                EventBus.emit('changeProfile2', true)
               } else {
-                localStorage.setItem('activeProfile', JSON.stringify(this.profiles[0]))
-                this.activeProfile = this.profiles[0]
-                EventBus.$emit('changeProfile2', true)
+                localStorage.removeItem('activeProfile')
               }
               this.$emit('clicked', this.activeProfile)
             }
@@ -151,9 +143,9 @@ export default {
     },
     handleSubmit (e) {
       this.submitted3 = true
-      EventBus.$emit('toggleLoader', true)
-      this.$v.$touch()
-      if (this.$v.$invalid) {
+      EventBus.emit('toggleLoader', true)
+      this.v$.$touch()
+      if (this.v$.$invalid) {
         return
       }
       var request = {
@@ -173,13 +165,13 @@ export default {
             this.$refs['add-profile'].hide()
             this.getallProfile()
             this.isLoading = false
-            EventBus.$emit('toggleLoader', true)
+            EventBus.emit('toggleLoader', true)
           }
         })
         .catch((e) => {
           console.log(e)
           this.isLoading = false
-          EventBus.$emit('toggleLoader', true)
+          EventBus.emit('toggleLoader', true)
         })
     }
   }

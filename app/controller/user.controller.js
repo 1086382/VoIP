@@ -43,32 +43,17 @@ exports.login = async (req, res) => {
             if(user){
                 var checkpassword = bcrypt.compareSync(req.body.password, user.password);
                 if(checkpassword){
-                    var obj = {id:user.id,email:user.email,name:user.name};
-                    var token = jwt.sign(obj, process.env.COOKIE_KEY);
-                    user.token = token;
-                    user.save();      
-                    var status = 'true';
-                    var harwarekey, mfa;
-                    if(user.hardwarekey && user.hardwarekey === 'true'){
-                        var mfa = false
-                        if(user.mfa && user.mfa === 'true') {
-                            mfa = true;
-                        }
-                        status = 'hardwarekey';
-                        // harwarekey = false
-                        harwarekey = await Hardwarekey.find({ user:user._id, registrationComplete: true });
-                        // res.send({status:'hardwarekey', message:'Successfully logged in.', data:user, token:token, harwarekey:harwarekey, mfa:mfa});
-                    } else
-                    if(user.mfa && user.mfa === 'true'){
-                        status = 'mfa';
-                        harwarekey = false
-                        mfa=true
-                    }else{
-                        harwarekey = false;
-                        mfa = false;
+                    if (user.mfa === 'true') {
+                        const token = jwt.sign({ id: user.id, purpose: 'totp' }, process.env.COOKIE_KEY, {
+                            expiresIn: '5m'
+                        });
+                        const { _id, name, email } = user;
+                        return res.send({ status: 'mfa', data: { _id, name, email }, token, mfa: true });
                     }
-                    const userDataResponse = userDataResponseGen(user);
-                    res.send({status:status, message:'Successfully logged in.', data:userDataResponse, token:token, harwarekey:harwarekey, mfa:mfa});
+                    if (user.hardwarekey === 'true') {
+                        return res.status(403).json({ status: 'false', message: 'Security key account requires recovery' });
+                    }
+                    await completeLogin(user, res);
                     return;
                 }else{
                     res.status(401).json({status:'false',message:'Unauthorized Access!'});
@@ -83,29 +68,37 @@ exports.login = async (req, res) => {
         res.status(400).json({status:'false',message:'something is wrong'});
     }
 };
-//otp-verify
+async function completeLogin(user, res) {
+    const token = jwt.sign({ id: user.id, email: user.email, name: user.name, purpose: 'session' },
+        process.env.COOKIE_KEY, { expiresIn: '30d' });
+    user.token = token;
+    await user.save();
+    res.send({ status: 'true', message: 'Successfully logged in.', data: userDataResponseGen(user), token });
+}
+
 exports.otpVerify = async (req, res) => {
-    try{
-        var userData = {_id:{$eq: req.body.user}};
-        var user = await User.findOne(userData);
-        if(user){
-            var verifyData = Speakeasy.totp.verify({
-                secret: user.mfa_token,
-                encoding: 'base32',
-                token: req.body.verification_code
-            });
-            if(verifyData){
-                res.status(200).json({status:'true',data:[],message:'verified successfully!'});
-            }else{
-                res.status(400).json({status:'false',message:'Please enter valid verification code!'});
-            }
-        }
-    }catch(error){
-        res.status(400).json({status:'false',message:'something is wrong'});
+    const invalid = () => res.status(401).json({ status: 'false', message: 'Invalid verification code or login challenge' });
+    try {
+        const challenge = jwt.verify(req.body.challenge, process.env.COOKIE_KEY, { algorithms: ['HS256'] });
+        if (challenge.purpose !== 'totp' || !/^\d{6}$/.test(req.body.verification_code)) return invalid();
+
+        const user = await User.findById(challenge.id);
+        if (!user || user.mfa !== 'true' || !Speakeasy.totp.verify({
+            secret: user.mfa_token,
+            encoding: 'base32',
+            token: req.body.verification_code
+        })) return invalid();
+
+        await completeLogin(user, res);
+    } catch {
+        return invalid();
     }
 };
 
 exports.register = async (req, res) => {
+    if (process.env.SIGNUPS !== "on") {
+        return res.status(403).json({ status: false, message: "Signups are disabled" });
+    }
     try{
         let rules = {
             email: 'required',
@@ -202,53 +195,17 @@ exports.checkDirectoryName = (req, res) => {
         res.status(400).json({status:'false',message:'something is wrong'});
     }
 };
-exports.getUpdateVersion = (req, res) => {
-    try{
-        var request = require('request');
-        request.get(remoteVersion, async function (error, response, body) {
-            if (!error && response.statusCode == 200) {
-                if(isNaN(body)){
-                    res.send({update: 'false'});
-                }else{
-                    // var curruntv = process.env.APP_VERSION
-                    // curruntv = curruntv.replace("v", "").replace("-beta", "");
-                    // console.log(body)
-                    //console.log(currentVersion)
-                    try {
-                        const body2 = fs.readFileSync(currentVersion, 'utf8')
-                        if(body2 < body){
-                            res.send({update: 'true'});
-                        }else{
-                            res.send({update: 'false'});
-                        }
-                    } catch (err) {
-                        console.error(err)
-                        res.send({update: 'false'});
-                    }
-                    // request.get(currentVersion, async function (error, response, body2) {
-                    //     if (!error && response.statusCode == 200) {
-                    //         if(isNaN(body2)){
-                    //             res.send({update: 'false'});
-                    //         }else{
-                    //             if(body2 < body){
-                    //                 res.send({update: 'true'});
-                    //             }else{
-                    //                 res.send({update: 'false'});
-                    //             }
-                    //         }
-                    //     }else{
-                    //         res.send({update: 'false'});
-                    //     }
-                    // });
-                    // console.log(currentVersion)
-                    // var current
-                }
-            }else{
-                res.send({update: 'false'});
-            }
-        });
-    }catch(error){
-        res.status(400).json({status:'false',message:'something is wrong'});
+exports.getUpdateVersion = async (req, res) => {
+    try {
+        const response = await fetch(remoteVersion, { signal: AbortSignal.timeout(5000) });
+        if (!response.ok) return res.send({ update: 'false' });
+
+        const remote = (await response.text()).trim();
+        const local = (await fs.promises.readFile(currentVersion, 'utf8')).trim();
+        const update = remote !== '' && Number.isFinite(Number(remote)) && Number(remote) > Number(local);
+        res.send({ update: String(update) });
+    } catch {
+        res.send({ update: 'false' });
     }
 };
 

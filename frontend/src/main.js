@@ -1,33 +1,45 @@
-// The Vue build version to load with the `import` command
-// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
-import Vue from 'vue'
-import App from './App'
+import { createApp } from 'vue'
+import {
+  createBootstrap, BButton, BDropdown, BDropdownDivider, BDropdownItemButton,
+  BFormCheckbox, BFormGroup, BFormInput, BFormRadioGroup, BInputGroup,
+  BInputGroupText, BModal, BOffcanvas, BTabs, BTab,
+  vBModal, vBToggle, vBTooltip,
+} from 'bootstrap-vue-next'
+import axios from 'axios'
+import VSelect from 'vue-select'
+import App from './App.vue'
 import router from './router'
-import VueSweetalert2 from 'vue-sweetalert2'
-import 'sweetalert2/dist/sweetalert2.min.css'
-// import store from '/core/services/store'
-import store from '../src/core/services/store'
-import ApiService from '../src/core/services/api.service'
-import VueChatScroll from 'vue-chat-scroll'
-import formLoading from 'vue2-form-loading'
-import vSelect from 'vue-select'
-var VueCookie = require('vue-cookie')
-window.axios = require('axios')
-Vue.use(VueChatScroll)
-Vue.component('v-select', vSelect)
-// Vue.use(Vuex)
-Vue.use(formLoading)
-ApiService.init()
-Vue.use(VueCookie)
-Vue.config.productionTip = false
-Vue.use(VueSweetalert2)
-Vue.use(require('vue-moment'))
+import store from './core/services/store'
+import ApiService from './core/services/api.service'
+import { cookies, swal, moment } from './browser-services'
+import AppIcon from './components/AppIcon.vue'
 
-/* eslint-disable no-new */
-new Vue({
-  el: '#app',
-  router,
-  store,
-  components: { App },
-  template: '<App/>'
-})
+import 'bootstrap/dist/css/bootstrap.css'
+import 'bootstrap-vue-next/dist/bootstrap-vue-next.css'
+import 'bootstrap-icons/font/bootstrap-icons.css'
+import 'vue-select/dist/vue-select.css'
+import 'sweetalert2/dist/sweetalert2.min.css'
+import './assets/css/main.css'
+
+window.axios = axios
+ApiService.init()
+
+const app = createApp(App)
+app.use(router)
+app.use(store)
+app.use(createBootstrap())
+for (const [name, component] of Object.entries({
+  BButton, BDropdown, BDropdownDivider, BDropdownItemButton, BFormCheckbox, BFormGroup,
+  BFormInput, BFormRadioGroup, BInputGroup, BInputGroupText, BModal, BOffcanvas, BTabs,
+  BTab, BIcon: AppIcon,
+})) {
+  app.component(name, component)
+}
+app.directive('b-modal', vBModal)
+app.directive('b-toggle', vBToggle)
+app.directive('b-tooltip', vBTooltip)
+app.component('VSelect', VSelect)
+app.config.globalProperties.$cookie = cookies
+app.config.globalProperties.$swal = swal
+app.config.globalProperties.$moment = moment
+app.mount('#app')

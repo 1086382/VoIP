@@ -1,13 +1,13 @@
 <template>
     <div>
-        <b-icon class="pointer-icon m-2" font-scale="1.5" icon="person-lines-fill" aria-hidden="true" title="Contacts" v-b-toggle.sidebar-right></b-icon>
-        <b-sidebar id="sidebar-right" right shadow no-header backdrop width="380px">
+        <b-icon class="pointer-icon m-2" font-scale="1.5" icon="person-lines-fill" aria-hidden="true" title="Contacts" v-b-toggle="'sidebar-right'" ></b-icon>
+        <b-offcanvas id="sidebar-right" placement="end" shadow no-header backdrop style="--bs-offcanvas-width: 380px">
             <template #default="{ hide }">
                 <div class="d-flex flex-row align-items-center flex-wrap mt-2 bd-highlight sidebar-header-row">
                     <b-button class="icon-btn-sm icon-btn-close m-1" size="sm" variant="primary">
                       <b-icon @click="hide" icon="x" scale="1"></b-icon>
                     </b-button>
-                    <b-button v-b-tooltip.hover title="Add Contact" @click="openContactModel()" class="icon-btn-sm m-1" size="sm" variant="primary">
+                    <b-button v-b-tooltip.hover title="Add Contact" aria-label="Add Contact" @click="openContactModel()" class="icon-btn-sm m-1" size="sm" variant="primary">
                         <b-icon icon="plus-circle" scale="1"></b-icon>
                     </b-button>
                     <b-button v-b-tooltip.hover title="Export Contact" @click="exportContact()" class="icon-btn-sm m-1" size="sm" variant="primary">
@@ -43,18 +43,18 @@
                   </ul>
                 </div>
             </template>
-        </b-sidebar>
+        </b-offcanvas>
 
-        <b-modal  ref="modal-contact" id="modal-contact" title="Contact" hide-footer>
+        <b-modal  ref="modal-contact" id="modal-contact" title="Contact" no-footer>
            <div class="card mt-4">
           <div class="card-body">
             <b-tabs content-class="mt-3">
-              <b-tab title="Add Contact" active>
+              <b-tab title="Add Contact" aria-label="Add Contact" active>
                 <form @submit.prevent="handleSubmit">
                   <div class=" form-group m-auto mb-2">
                     <label>First Name</label>
-                    <input class="form-control" type="text" placeholder="First Name" v-model="form.first_name" id="first_name" name="first_name" :class="{ 'is-invalid': submitted && $v.form.first_name.$error }"  />
-                    <div v-if="submitted && !$v.form.first_name.required" class="invalid-feedback">First Name is required</div>
+                    <input class="form-control" type="text" placeholder="First Name" v-model="form.first_name" id="first_name" name="first_name" :class="{ 'is-invalid': submitted && v$.form.first_name.$error }"  />
+                    <div v-if="submitted && v$.form.first_name.required.$invalid" class="invalid-feedback">First Name is required</div>
                   </div>
                   <div class="form-group m-auto mb-2">
                     <label>Last Name</label>
@@ -62,9 +62,9 @@
                   </div>
                   <div class="form-group m-auto mb-2">
                     <label>Number</label>
-                    <input class="form-control" type="text" placeholder="Number" v-model="form.number" id="number" name="number" :class="{ 'is-invalid': submitted && $v.form.number.$error }"  />
-                    <div v-if="submitted && !$v.form.number.required" class="invalid-feedback">Number is required</div>
-                    <div v-if="submitted && !$v.form.number.phonenumber" class="invalid-feedback">Please enter valid number. </div>
+                    <input class="form-control" type="text" placeholder="Number" v-model="form.number" id="number" name="number" :class="{ 'is-invalid': submitted && v$.form.number.$error }"  />
+                    <div v-if="submitted && v$.form.number.required.$invalid" class="invalid-feedback">Number is required</div>
+                    <div v-if="submitted && v$.form.number.phonenumber.$invalid" class="invalid-feedback">Please enter valid number. </div>
                   </div>
 
                   <div class="form-group m-auto mb-2">
@@ -100,13 +100,15 @@
     </div>
 </template>
 <script>
+import useVuelidate from '@vuelidate/core'
 import { post } from '../../core/module/common.module'
-import { required, helpers } from 'vuelidate/lib/validators'
+import { required, helpers } from '@vuelidate/validators'
 import Papa from 'papaparse'
-import { EventBus } from '@/event-bus'
+import { EventBus, listenToAppEvent } from '@/event-bus'
 // eslint-disable-next-line no-useless-escape
-const phonenumber = helpers.regex('phonenumber', /^\+?[0-9\(\-\)\ ]{5,17}$/)
+const phonenumber = helpers.regex(/^\+?[0-9\(\-\)\ ]{5,17}$/)
 export default {
+  setup() { return { v$: useVuelidate() } },
   props: ['contacts'],
   data () {
     return {
@@ -148,7 +150,7 @@ export default {
     }
   },
   mounted: function () {
-    EventBus.$on('addContact', (number) => {
+    listenToAppEvent('addContact', (number) => {
       this.editId = false
       this.emptyContact()
       this.$refs['modal-contact'].show()
@@ -260,8 +262,8 @@ export default {
     handleSubmit (e) {
       this.submitted = true
       // stop here if form is invalid
-      this.$v.$touch()
-      if (this.$v.$invalid) {
+      this.v$.$touch()
+      if (this.v$.$invalid) {
         return
       }
       // eslint-disable-next-line no-undef
@@ -287,7 +289,7 @@ export default {
             this.$refs['modal-contact'].hide()
             // this.getContacts()
             this.$emit('onaddContact', true)
-            EventBus.$emit('contactAdded', this.form.number)
+            EventBus.emit('contactAdded', this.form.number)
             this.emptyContact()
             this.submitted = false
           }
@@ -348,7 +350,7 @@ export default {
                 text: 'Contact Deleted successfully!'
               })
               this.$emit('onaddContact', true)
-              EventBus.$emit('contactAdded', 'delete')
+              EventBus.emit('contactAdded', 'delete')
               // this.getContacts()
               // this.$refs['modal-contact'].hide()
             })

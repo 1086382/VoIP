@@ -5,38 +5,38 @@
             <form @submit.prevent="handleSubmit" class="ml-2 mr-2">
               <div class="form-group mt-4">
                 <b-input-group>
-                  <b-input-group-prepend is-text>
+                  <b-input-group-text>
                     <b-icon icon="person-fill"></b-icon>
-                  </b-input-group-prepend>
-                <input class="form-control chat-input" type="text" placeholder="Username" v-model="user.email" :class="{ 'is-invalid': submitted && $v.user.email.$error }" title="Enter Username">
+                  </b-input-group-text>
+                <input class="form-control chat-input" type="text" placeholder="Username" v-model="user.email" :class="{ 'is-invalid': submitted && v$.user.email.$error }" title="Enter Username">
                 </b-input-group>
-                <div v-if="submitted && $v.user.email.$error" class="invalid-feedback">
-                  <span v-if="!$v.user.email.required">Username is required</span>
-                  <span v-if="!$v.user.email.minLength">Please enter a valid Username</span>
+                <div v-if="submitted && v$.user.email.$error" class="invalid-feedback">
+                  <span v-if="v$.user.email.required.$invalid">Username is required</span>
+                  <span v-if="v$.user.email.minLength.$invalid">Please enter a valid Username</span>
                 </div>
               </div>
               <div class="form-group mb-2 mt-4">
                 <b-input-group>
-                  <b-input-group-prepend is-text>
+                  <b-input-group-text>
                     <b-icon icon="shield-lock"></b-icon>
-                  </b-input-group-prepend>
-                <input class="chat-input form-control" v-model="user.password"  type="password" placeholder="Password" :class="{ 'is-invalid': submitted && $v.user.password.$error }" title="Enter Password">
+                  </b-input-group-text>
+                <input class="chat-input form-control" v-model="user.password"  type="password" placeholder="Password" :class="{ 'is-invalid': submitted && v$.user.password.$error }" title="Enter Password">
                 </b-input-group>
-                <div v-if="submitted && $v.user.password.$error" class="invalid-feedback">
-                    <span v-if="!$v.user.password.required">Password is required</span>
-                    <span v-if="!$v.user.password.minLength">Please enter a valid password</span>
+                <div v-if="submitted && v$.user.password.$error" class="invalid-feedback">
+                    <span v-if="v$.user.password.required.$invalid">Password is required</span>
+                    <span v-if="v$.user.password.minLength.$invalid">Please enter a valid password</span>
                 </div>
               </div>
               <div class="form-group mb-2 mt-2">
                 <b-input-group>
-                  <b-input-group-prepend is-text>
+                  <b-input-group-text>
                     <b-icon icon="shield-lock"></b-icon>
-                  </b-input-group-prepend>
-                <input class="chat-input form-control" v-model="user.c_password"  type="password" placeholder="Confirm Password" id="clogin-input" :class="{ 'is-invalid': submitted && $v.user.c_password.$error }" title="Enter Password Again">
+                  </b-input-group-text>
+                <input class="chat-input form-control" v-model="user.c_password"  type="password" placeholder="Confirm Password" id="clogin-input" :class="{ 'is-invalid': submitted && v$.user.c_password.$error }" title="Enter Password Again">
                 </b-input-group>
-                <div v-if="submitted && $v.user.c_password.$error" class="invalid-feedback">
-                    <span v-if="!$v.user.c_password.required">Password is required<br></span>
-                    <span v-if="!$v.user.c_password.sameAsPassword">Password and confirm password are not match!</span>
+                <div v-if="submitted && v$.user.c_password.$error" class="invalid-feedback">
+                    <span v-if="v$.user.c_password.required.$invalid">Password is required<br></span>
+                    <span v-if="v$.user.c_password.sameAsPassword.$invalid">Password and confirm password are not match!</span>
                 </div>
               </div>
               <div class="d-grid">
@@ -63,15 +63,17 @@
 </template>
 
 <script>
+import useVuelidate from '@vuelidate/core'
 
-import { required, minLength, sameAs } from 'vuelidate/lib/validators'
+import { required, minLength, sameAs } from '@vuelidate/validators'
 import { combineURLs } from '@/helper'
 
 export default {
+  setup() { return { v$: useVuelidate() } },
   name: 'Signup',
   data () {
     return {
-      version: process.env.VERSION,
+      version: import.meta.env.VITE_VERSION,
       user: {
         email: '',
         password: ''
@@ -81,12 +83,14 @@ export default {
       loginRoute: ''
     }
   },
-  validations: {
-    user: {
-      email: { required, minLength: minLength(2) },
-      password: { required, minLength: minLength(6) },
-      // eslint-disable-next-line standard/object-curly-even-spacing
-      c_password: {required, sameAsPassword: sameAs('password') }
+  validations () {
+    return {
+      user: {
+        email: { required, minLength: minLength(2) },
+        password: { required, minLength: minLength(6) },
+        // eslint-disable-next-line standard/object-curly-even-spacing
+        c_password: {required, sameAsPassword: sameAs(this.user.password) }
+      }
     }
   },
   mounted: function () {
@@ -101,8 +105,8 @@ export default {
     handleSubmit (e) {
       e.preventDefault()
       this.submitted = true
-      this.$v.$touch()
-      if (this.$v.$invalid) {
+      this.v$.$touch()
+      if (this.v$.$invalid) {
         return
       }
 

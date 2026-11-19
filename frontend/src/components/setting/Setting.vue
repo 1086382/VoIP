@@ -1,14 +1,14 @@
 <template>
   <div>
-      <b-icon font-scale="1.5" icon="gear-fill" aria-hidden="true" class="m-2" title="Settings" style="cursor:pointer;" v-b-toggle.sidebar-email-setting></b-icon>
-      <b-sidebar id="sidebar-email-setting" title="Settings" shadow backdrop>
+      <b-icon font-scale="1.5" icon="gear-fill" aria-hidden="true" class="m-2" title="Settings" style="cursor:pointer;" v-b-toggle="'sidebar-email-setting'" ></b-icon>
+      <b-offcanvas id="sidebar-email-setting" title="Settings" shadow backdrop>
           <div v-if="activeMenu == 'setting'">
             <ul class="list-group">
               <li class="list-group-item" @click="enableMenu('email')" style="cursor: pointer">
                 <b-icon icon="envelope" font-scale="1" aria-hidden="true" class="mx-2"></b-icon>Email Settings</li>
               <!--<li class="list-group-item" @click="enableMenu('call')" style="cursor: pointer">
                 <b-icon icon="telephone-x" font-scale="1" aria-hidden="true" class="mx-2"></b-icon>Call Settings</li> -->
-              <li class="list-group-item" v-b-modal.modal-1 style="cursor: pointer">
+              <li class="list-group-item" v-b-modal="'modal-1'"  style="cursor: pointer">
                 <b-icon icon="person-badge" font-scale="1" aria-hidden="true" class="mx-2"></b-icon>Profile Settings
               </li>
               <li class="list-group-item" @click="enableMenu('account')" style="cursor: pointer">
@@ -102,7 +102,7 @@
               </div>
             </div>
           </div>
-      </b-sidebar>
+      </b-offcanvas>
   </div>
 </template>
 <script>

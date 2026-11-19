@@ -1,6 +1,5 @@
-import Vue from 'vue'
 import axios from 'axios'
-import VueAxios from 'vue-axios'
+import { cookies } from '../../browser-services'
 import { combineURLs } from '../../helper'
 
 /**
@@ -15,8 +14,7 @@ const ApiService = {
       baseurl2 = 'http://localhost:3000'
     }
     console.log(baseurl2)
-    Vue.use(VueAxios, axios)
-    Vue.axios.defaults.baseURL = combineURLs(baseurl2, '/api')
+    axios.defaults.baseURL = combineURLs(baseurl2, '/api')
   },
 
   /**
@@ -24,21 +22,21 @@ const ApiService = {
    */
   setHeader () {
     // eslint-disable-next-line standard/computed-property-even-spacing
-    Vue.axios.defaults.headers.common[
+    axios.defaults.headers.common[
       'Cache-Control'
     // eslint-disable-next-line camelcase
     ] = 'no-cache'
     // eslint-disable-next-line camelcase
-    var access_token = Vue.cookie.get('access_token')
+    var access_token = cookies.get('access_token')
     // eslint-disable-next-line standard/computed-property-even-spacing
-    Vue.axios.defaults.headers.common[
+    axios.defaults.headers.common[
       'token'
     // eslint-disable-next-line camelcase
     ] = `${access_token}`
   },
 
   query (resource, params) {
-    return Vue.axios.get(resource, params).catch(error => {
+    return axios.get(resource, params).catch(error => {
       console.log(error)
       throw new Error(`ApiService ${error}`)
     })
@@ -51,7 +49,7 @@ const ApiService = {
    * @returns {*}
    */
   get (resource, slug = '') {
-    return Vue.axios.get(`${resource}/${slug}`).catch(error => {
+    return axios.get(`${resource}/${slug}`).catch(error => {
       // console.log(error);
       throw new Error(`ApiService ${error}`)
     })
@@ -64,7 +62,7 @@ const ApiService = {
    * @returns {*}
    */
   post (url, params) {
-    return Vue.axios.post(`${url}`, params)
+    return axios.post(`${url}`, params)
   },
 
   /**
@@ -75,7 +73,7 @@ const ApiService = {
    * @returns {IDBRequest<IDBValidKey> | Promise<void>}
    */
   update (resource, slug, params) {
-    return Vue.axios.put(`${resource}/${slug}`, params)
+    return axios.put(`${resource}/${slug}`, params)
   },
 
   /**
@@ -85,7 +83,7 @@ const ApiService = {
    * @returns {IDBRequest<IDBValidKey> | Promise<void>}
    */
   put (resource, params) {
-    return Vue.axios.put(`${resource}`, params)
+    return axios.put(`${resource}`, params)
   },
 
   /**
@@ -94,7 +92,7 @@ const ApiService = {
    * @returns {*}
    */
   delete (resource) {
-    return Vue.axios.delete(resource).catch(error => {
+    return axios.delete(resource).catch(error => {
       // console.log(error);
       throw new Error(`[RWV] ApiService ${error}`)
     })

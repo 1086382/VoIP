@@ -685,7 +685,7 @@ a {
 .modal-content{
     background-color: var(--background-color-primary);
 }
-.close, #sidebar-email-setting .b-sidebar-header .close {
+.close, #sidebar-email-setting .offcanvas-header .close {
     width: 34px;
     height: 34px;
     padding: 0 !important;
@@ -766,19 +766,19 @@ a {
 }
 
 /* sidebar css */
-.b-sidebar-header, .b-sidebar-body{
+.offcanvas-header, .offcanvas-body{
     background-color: var(--contact-list);
     color: var(--text-primary-color);
 }
-.b-sidebar-header {
+.offcanvas-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
-.b-sidebar-body {
+.offcanvas-body {
     padding: var(--space-xl);
 }
-#sidebar-no-header .b-sidebar-body {
+#sidebar-no-header .offcanvas-body {
     padding: 0;
     position: relative;
 }

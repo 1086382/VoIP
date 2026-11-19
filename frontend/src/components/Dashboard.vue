@@ -12,7 +12,7 @@
       </div>
     </div>
     <theme-button id-hide="true"></theme-button>
-    <b-sidebar
+    <b-offcanvas
       v-if="vw < 576"
       class="d-sm-none"
       id="sidebar-no-header"
@@ -21,8 +21,8 @@
       no-header
       shadow
       backdrop
-      visible
-      width="94%"
+      v-model="mobileSidebarOpen"
+      style="--bs-offcanvas-width: 94%"
     >
       <template #default="{ hide }">
         <b-button class="icon-btn-sm icon-btn-close mobile-sidebar-close" size="sm" variant="primary">
@@ -35,7 +35,7 @@
           @clicked="onClickChild"
         />
       </template>
-    </b-sidebar>
+    </b-offcanvas>
     <section class="col-auto col-md-4 d-none d-sm-block">
       <number-list
         ref="numberList"
@@ -52,7 +52,7 @@
           icon="chevron-left"
           aria-hidden="true"
           class="mx-3 my-auto d-sm-none h2"
-          v-b-toggle.sidebar-no-header
+          v-b-toggle="'sidebar-no-header'"
         ></b-icon>
         <b-icon
           font-scale="2"
@@ -210,7 +210,7 @@
                   <span v-else> {{ message.message }} </span>
                 </div>
                 <div class="time">
-                  {{ message.created_at | moment("LLL") }}
+                  {{ $moment(message.created_at).format("LLL") }}
                   <!-- January 1, 2000 10:00 AM -->
                 </div>
               </div>
@@ -253,7 +253,7 @@
       id="modal-2"
       size="lg"
       title="Compose Message"
-      hide-footer
+      no-footer
     >
       <span class="small text-secondary"
         >Input (+) and country code followed by the 10 digit phone number. If no
@@ -271,13 +271,15 @@
           :options="searchContacts"
         ></v-select>
         <div class="form-group mt-4">
-          <vue-tags-input
-            class="form-control chat-input"
-            v-model="sms.numbers"
-            :tags="tags"
-            placeholder="Enter phone number"
-            @tags-changed="(newTags) => (tags = newTags)"
-          />
+          <div class="d-flex flex-wrap gap-2 mb-2">
+            <button v-for="(tag, index) in tags" :key="index" type="button"
+                    class="btn btn-sm btn-outline-secondary" @click="tags.splice(index, 1)">
+              {{ tag.text }} ×
+            </button>
+          </div>
+          <input class="form-control chat-input" v-model="sms.numbers"
+                 type="tel" placeholder="Enter phone number"
+                 @keydown.enter.prevent="addRecipients()">
           <div v-if="tags.length <= 0" class="invalid-feedback">
             <span>Numbers are required</span>
           </div>
@@ -288,14 +290,14 @@
             class="form-control chat-input"
             v-model="sms.message"
             placeholder="Type Message here"
-            :class="{ 'is-invalid': submitted2 && $v.sms.message.$error }"
+            :class="{ 'is-invalid': submitted2 && v$.sms.message.$error }"
           >
           </textarea>
           <div
-            v-if="submitted2 && $v.sms.message.$error"
+            v-if="submitted2 && v$.sms.message.$error"
             class="invalid-feedback"
           >
-            <span v-if="!$v.sms.message.required">Message is required</span>
+            <span v-if="v$.sms.message.required.$invalid">Message is required</span>
           </div>
         </div>
         <div class="input-group mb-3">
@@ -348,23 +350,24 @@
   </div>
 </template>
 <script>
-import { required } from "vuelidate/lib/validators";
+import useVuelidate from '@vuelidate/core'
+import { required } from "@vuelidate/validators";
 import NumberList from "./inbox/NumberList.vue";
-import VueTagsInput from "@johmun/vue-tags-input";
+import messageIcon from '@/assets/img/icon.png';
 import ThemeButton from "@/components/ThemeButton.vue";
 import { post } from "../core/module/common.module";
 import Setting from "./setting/Setting.vue";
 import CallView from "@/components/CallView.vue";
 import CheckDir from "@/components/CheckDir.vue";
-import { EventBus } from "@/event-bus";
+import { EventBus, listenToAppEvent } from "@/event-bus";
 import { io } from "socket.io-client";
 import { combineURLs } from '@/helper';
 
 export default {
+  setup() { return { v$: useVuelidate() } },
   name: "dashboard",
   components: {
     NumberList,
-    VueTagsInput,
     ThemeButton,
     Setting,
     CallView,
@@ -401,38 +404,40 @@ export default {
       messageBody: "",
       socket: null,
       baseurl: "",
-      vw: 0,
+      vw: window.innerWidth,
       vh: 0,
       modelMms: false,
       modelFileValu: "",
       zoomImage: "",
       searchContacts: [],
-      activeCallTab: false,
+      activeCallTab: true,
+      mobileSidebarOpen: true,
     };
   },
   created() {
     window.addEventListener("resize", this.updateVw, { passive: true });
   },
-  destroyed() {
+  beforeUnmount() {
     window.removeEventListener("resize", this.updateVw, { passive: true });
+    this.socket?.disconnect();
   },
   mounted: function () {
-    EventBus.$on("toggleLoader", () => {
+    listenToAppEvent("toggleLoader", () => {
       this.toggleLoader();
     });
-    EventBus.$on("contactAdded", (number) => {
-      if (this.activeChat._id === number) {
+    listenToAppEvent("contactAdded", (number) => {
+      if (this.activeChat?._id === number) {
         this.showChat(this.activeChat);
       }
     });
-    EventBus.$on("changeProfile2", () => {
+    listenToAppEvent("changeProfile2", () => {
       this.activeChat = null;
       this.activeCallTab = false;
       setTimeout(() => {
         this.activeCallTab = true;
       }, 1500);
     });
-    EventBus.$on("changeProfile", () => {
+    listenToAppEvent("changeProfile", () => {
       this.activeChat = null;
       this.activeCallTab = false;
       setTimeout(() => {
@@ -440,15 +445,20 @@ export default {
       }, 1500);
     });
 
-    if (!this.$cookie.get("access_token")) {
+    this.access_token = this.$cookie.get("access_token");
+    if (!this.access_token) {
       this.$router.push("/");
+      return;
     }
     this.updateVw();
     var baseUrl = window.location.origin;
     if (baseUrl === "http://localhost:8080") {
       this.baseurl = "http://localhost:3000";
     }
-    const socket = io(this.baseurl, { transports: ["websocket"] });
+    const socket = io(this.baseurl, {
+      transports: ["websocket"],
+      auth: { token: this.access_token },
+    });
     this.socket = socket;
     var $this = this;
     this.socket.on("new_message", function (data) {
@@ -459,8 +469,6 @@ export default {
     });
     // this.userdata = JSON.parse(localStorage.getItem('userdata'))
     this.userdata = JSON.parse(this.$cookie.get("userdata"));
-    this.access_token = this.$cookie.get("access_token");
-    this.socket.emit("join_profile_channel", this.userdata._id.toString());
 
     this.socket.on("user_message", function (data) {
       if ($this.activeChatData) {
@@ -498,7 +506,7 @@ export default {
   },
   methods: {
     addContact(number) {
-      EventBus.$emit("addContact", number);
+      EventBus.emit("addContact", number);
     },
     toggleLoader() {
       if (this.isLoading) {
@@ -516,11 +524,12 @@ export default {
       this.messages = [];
     },
     contactChangeEvent(e) {
+      if (!e) return;
       var inputText = { text: e.code, tiClasses: ["ti-valid"] };
       this.tags.push(inputText);
       // this.sms.numbers = e.target.value
 
-      this.selectedContact = "";
+      this.selectedContact = null;
       // console.log(e.target.value)
     },
     onaddContact(data) {
@@ -647,7 +656,7 @@ export default {
       e.stopPropagation();
     },
     activeProfileView(profile) {
-      if (profile.refresh !== undefined && profile.refresh) {
+      if (profile?.refresh) {
         this.messages = [];
       }
       this.activeProfile = profile;
@@ -656,7 +665,7 @@ export default {
       this.firstChatShow(value);
     },
     notifyMe(user, message) {
-      let msgIcon = require(`@/assets/img/icon.png`);
+      let msgIcon = messageIcon;
       if (!("Notification" in window)) {
         alert("This browser does not support desktop notification");
       } else if (Notification.permission === "granted") {
@@ -826,9 +835,16 @@ export default {
           console.log(e);
         });
     },
+    addRecipients() {
+      for (const number of this.sms.numbers.split(/[,;\n]+/)) {
+        if (number.trim()) this.tags.push({ text: number.trim() });
+      }
+      this.sms.numbers = "";
+    },
     handleSubmit2(e) {
+      this.addRecipients();
       this.submitted2 = true;
-      this.$v.$touch();
+      this.v$.$touch();
       this.isLoading = true;
       if (this.tags.length <= 0) {
         this.$swal({
@@ -843,7 +859,7 @@ export default {
         numbers.push(this.tags[i].text);
       }
       // return
-      if (!this.$v.sms.message.$error || this.uploadedImages.length > 0) {
+      if (!this.v$.sms.message.$error || this.uploadedImages.length > 0) {
         this.commonSendMessage(numbers, this.sms.message);
       } else {
         this.$swal({

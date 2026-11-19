@@ -25,13 +25,13 @@
                 aria-hidden="true"
                 class="m-2"
                 title="Call"
-                @click="$bvModal.show('modal-tall')"
+                v-b-modal="'modal-tall'"
                 style="cursor:pointer;"
               ></b-icon>
             </div>
             <div class="bd-highlight">
               <b-icon
-                v-b-modal.modal-2
+                v-b-modal="'modal-2'"
                 font-scale="1.5"
                 icon="pencil-square"
                 aria-hidden="true"
@@ -59,7 +59,7 @@
                   >
                 </div>
                 <div v-else>
-                  <span v-if="userdata">{{ userdata.name }}</span>
+                  <div v-if="userdata" class="profileName">{{ userdata.name }}</div>
                 </div>
                 <div>
                   <b-icon
@@ -74,7 +74,7 @@
               </div>
             </template>
             <b-dropdown-divider></b-dropdown-divider>
-            <!-- <b-dropdown-item-button v-b-modal.modal-1  v-if="activeProfile">
+            <!-- <b-dropdown-item-button v-b-modal="'modal-1'"   v-if="activeProfile">
               <b-icon icon="gear-fill" aria-hidden="true"></b-icon>
               Settings
             </b-dropdown-item-button>
@@ -181,7 +181,7 @@
           </div>
 
           <div class="align-self-center text-end me-3">
-            <span class="time">{{ item.created_at | moment("lll") }}</span>
+            <span class="time">{{ $moment(item.created_at).format("lll") }}</span>
             <!-- Jan 1, 2000 10:00 AM -->
             <span
               class="badge message_count bg-success"
@@ -194,7 +194,7 @@
       </div>
     </div>
     <!-- setting modal -->
-    <b-modal ref="my-modal" id="modal-1" size="lg" title="Settings" hide-footer>
+    <b-modal ref="my-modal" id="modal-1" size="lg" title="Settings" no-footer>
       <theme-button id-hide="false" />
       <form @submit.prevent="handleSubmit" class="ml-2 mr-2">
         <b-form-radio-group
@@ -221,13 +221,13 @@
                   type="text"
                   placeholder="Alias/Name"
                   v-model="user.profile"
-                  :class="{ 'is-invalid': submitted && $v.user.profile.$error }"
+                  :class="{ 'is-invalid': submitted && v$.user.profile.$error }"
                 />
                 <div
-                  v-if="submitted && $v.user.profile.$error"
+                  v-if="submitted && v$.user.profile.$error"
                   class="invalid-feedback"
                 >
-                  <span v-if="!$v.user.profile.required"
+                  <span v-if="v$.user.profile.required.$invalid"
                     >Profile is required</span
                   >
                 </div>
@@ -266,16 +266,16 @@
                   v-model="user.api_key"
                   :class="{
                     'is-invalid':
-                      submitted && $v.user.api_key.$error && user.profile == ''
+                      submitted && v$.user.api_key.$error && user.profile == ''
                   }"
                 />
                 <div
                   v-if="
-                    submitted && $v.user.api_key.$error && user.profile == ''
+                    submitted && v$.user.api_key.$error && user.profile == ''
                   "
                   class="invalid-feedback"
                 >
-                  <span v-if="!$v.user.api_key.required"
+                  <span v-if="v$.user.api_key.required.$invalid"
                     >API Key is required</span
                   >
                 </div>
@@ -300,7 +300,7 @@
                     v-model="user.number"
                     :class="{
                       'is-invalid':
-                        submitted && $v.user.number.$error && user.profile == ''
+                        submitted && v$.user.number.$error && user.profile == ''
                     }"
                   >
                     <option
@@ -319,11 +319,11 @@
                   ></custom-autocomplete-select>
                   <div
                     v-if="
-                      submitted && $v.user.number.$error && user.profile == ''
+                      submitted && v$.user.number.$error && user.profile == ''
                     "
                     class="invalid-feedback"
                   >
-                    <span v-if="!$v.user.number.required"
+                    <span v-if="v$.user.number.required.$invalid"
                       >Number is required</span
                     >
                   </div>
@@ -365,17 +365,17 @@
                   :class="{
                     'is-invalid':
                       submitted &&
-                      $v.user.twilio_sid.$error &&
+                      v$.user.twilio_sid.$error &&
                       user.profile == ''
                   }"
                 />
                 <div
                   v-if="
-                    submitted && $v.user.twilio_sid.$error && user.profile == ''
+                    submitted && v$.user.twilio_sid.$error && user.profile == ''
                   "
                   class="invalid-feedback"
                 >
-                  <span v-if="!$v.user.twilio_sid.required"
+                  <span v-if="v$.user.twilio_sid.required.$invalid"
                     >Twilio sid is required</span
                   >
                 </div>
@@ -398,19 +398,19 @@
                   :class="{
                     'is-invalid':
                       submitted &&
-                      $v.user.twilio_token.$error &&
+                      v$.user.twilio_token.$error &&
                       user.profile == ''
                   }"
                 />
                 <div
                   v-if="
                     submitted &&
-                      $v.user.twilio_token.$error &&
+                      v$.user.twilio_token.$error &&
                       user.profile == ''
                   "
                   class="invalid-feedback"
                 >
-                  <span v-if="!$v.user.twilio_token.required"
+                  <span v-if="v$.user.twilio_token.required.$invalid"
                     >Twilio token is required</span
                   >
                 </div>
@@ -442,7 +442,7 @@
                     :class="{
                       'is-invalid':
                         submitted &&
-                        $v.user.twilio_number.$error &&
+                        v$.user.twilio_number.$error &&
                         user.profile == ''
                     }"
                   >
@@ -456,12 +456,12 @@
                   <div
                     v-if="
                       submitted &&
-                        $v.user.twilio_number.$error &&
+                        v$.user.twilio_number.$error &&
                         user.profile == ''
                     "
                     class="invalid-feedback"
                   >
-                    <span v-if="!$v.user.twilio_number.required"
+                    <span v-if="v$.user.twilio_number.required.$invalid"
                       >Number is required</span
                     >
                   </div>
@@ -497,17 +497,19 @@
 </template>
 
 <script>
+import useVuelidate from '@vuelidate/core'
 import ThemeButton from "@/components/ThemeButton.vue";
 import ProfileView from "@/components/setting/ProfileView.vue";
 import Contact from "@/components/setting/Contact.vue";
-import { required } from "vuelidate/lib/validators";
+import { required } from "@vuelidate/validators";
 import { get, post } from "../../core/module/common.module";
 import PullToRefresh from "pulltorefreshjs";
 import Setting from "@/components/setting/Setting.vue";
-import { EventBus } from "@/event-bus";
+import { EventBus, listenToAppEvent } from "@/event-bus";
 import CustomAutocompleteSelect from "../CustomAutocompleteSelect.vue";
 
 export default {
+  setup() { return { v$: useVuelidate() } },
   components: {
     ProfileView,
     ThemeButton,
@@ -593,21 +595,21 @@ export default {
       distThreshold: 120,
       distMax: 140
     });
-    EventBus.$on("getOneProfile", data => {
+    listenToAppEvent("getOneProfile", data => {
       try {
         this.getOneProfile();
       } catch (e) {
         // console.log(e)
       }
     });
-    EventBus.$on("changeProfile", data => {
+    listenToAppEvent("changeProfile", data => {
       // console.log(data)
       // this.getOneProfile()
     });
-    EventBus.$on("contactAdded", number => {
+    listenToAppEvent("contactAdded", number => {
       this.getNumberList();
       setTimeout(() => {
-        if (number === "delete" || this.activeItem._id === number) {
+        if (number === "delete" || this.activeItem?._id === number) {
           var numberClass = document.getElementsByClassName(`activeChat`);
           if (numberClass.length > 0) {
             numberClass[0].click();
@@ -655,7 +657,7 @@ export default {
         });
     },
     getOneProfile() {
-      if (this.activeProfile._id !== undefined) {
+      if (this.activeProfile?._id) {
         var request = {
           data: { setting: this.activeProfile._id },
           url: "profile/getdata-one"
@@ -681,6 +683,12 @@ export default {
     },
     onClickChild(value) {
       this.activeProfile = value;
+      if (!value) {
+        this.numbers = [];
+        this.messageListLoader = false;
+        this.$emit("activeChat", null);
+        return;
+      }
       this.messageListLoader = true;
       this.getNumberList();
       value.refresh = true;
@@ -706,6 +714,7 @@ export default {
     },
     getNumberList() {
       this.numbers = [];
+      if (!this.userdata || !this.activeProfile?._id) return;
       var request = {
         data: { user: this.userdata._id, setting: this.activeProfile._id },
         url: "setting/sms-number-list"
@@ -885,21 +894,21 @@ export default {
     },
     handleSubmit(e) {
       this.submitted = true;
-      this.$v.$touch();
+      this.v$.$touch();
       if (
         // eslint-disable-next-line eqeqeq
         this.user.profile != "" ||
         (this.selected === "telnyx" &&
-          !this.$v.user.api_key.$error &&
-          !this.$v.user.number.$error &&
-          !this.$v.user.profile.$error) ||
+          !this.v$.user.api_key.$error &&
+          !this.v$.user.number.$error &&
+          !this.v$.user.profile.$error) ||
         // eslint-disable-next-line eqeqeq
         this.user.profile != "" ||
         (this.selected === "twilio" &&
-          !this.$v.user.twilio_sid.$error &&
-          !this.$v.user.twilio_token.$error &&
-          !this.$v.user.twilio_number.$error &&
-          !this.$v.user.profile.$error)
+          !this.v$.user.twilio_sid.$error &&
+          !this.v$.user.twilio_token.$error &&
+          !this.v$.user.twilio_number.$error &&
+          !this.v$.user.profile.$error)
       ) {
         let sid = "";
         if (this.selected === "telnyx") {
@@ -1000,9 +1009,9 @@ export default {
                             this.activeProfile = response.data;
                             this.hideShowDeleteIcon(response.data);
                             this.$refs.childComponent.getallProfile();
-                            EventBus.$emit("clicked", true);
-                            EventBus.$emit("changeProfile2", true);
-                            this.$v.$reset();
+                            EventBus.emit("clicked", true);
+                            EventBus.emit("changeProfile2", true);
+                            this.v$.$reset();
                           }
                           this.isLoading = false;
                         })
@@ -1026,9 +1035,9 @@ export default {
                       this.activeProfile = response.data;
                       this.hideShowDeleteIcon(response.data);
                       this.$refs.childComponent.getallProfile();
-                      EventBus.$emit("clicked", true);
-                      EventBus.$emit("changeProfile2", true);
-                      this.$v.$reset();
+                      EventBus.emit("clicked", true);
+                      EventBus.emit("changeProfile2", true);
+                      this.v$.$reset();
                     }
                     this.isLoading = false;
                   })

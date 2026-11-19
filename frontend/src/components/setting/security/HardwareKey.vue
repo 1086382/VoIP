@@ -46,7 +46,7 @@ import { post } from '../../../core/module/common.module'
 // import base64url from 'base64url'
 import { parseAuthData, bufToHex } from '../../../helper'
 // const Helper = require('../../../helper')
-const CBOR = require('cbor-js')
+import CBOR from 'cbor-js'
 // const cbor = require('cbor')
 export default {
   data () {

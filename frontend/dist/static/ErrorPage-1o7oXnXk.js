@@ -1,0 +1,1 @@
+import{T as e,g as t,n,p as r}from"./index-C8Xfl35G.js";var i={},a={id:`error`};function o(n,i){return e(),t(`div`,a,[...i[0]||=[r(`main`,null,[r(`div`,{class:`container`},[r(`div`,{title:`404`,class:`errorPage`},`404`)])],-1)]])}var s=n(i,[[`render`,o]]);export{s as default};

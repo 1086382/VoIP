@@ -1,48 +1,32 @@
-import Vue from 'vue'
-import Router from 'vue-router'
-import Vuelidate from 'vuelidate'
-import { BootstrapVue, IconsPlugin } from 'bootstrap-vue'
-import InputTag from 'vue-input-tag'
+import { createRouter, createWebHistory } from 'vue-router'
 
-// Import Bootstrap an BootstrapVue CSS files (order is important)
-import 'bootstrap/dist/css/bootstrap.css'
-import 'bootstrap-vue/dist/bootstrap-vue.css'
-require('../assets/css/main.css')
-Vue.use(BootstrapVue)
-// Optionally install the BootstrapVue icon components plugin
-Vue.use(IconsPlugin)
-Vue.component('input-tag', InputTag)
-
-Vue.use(Router)
-Vue.use(Vuelidate)
-
-export default new Router({
-  mode: 'history',
+export default createRouter({
+  history: createWebHistory(),
   routes: [
     {
       path: '/:appdirectory/test-key',
-      component: () => import('@/components/HardwarkeyTest')
+      component: () => import('@/components/HardwarkeyTest.vue')
     },
     {
       path: '/404',
-      component: () => import('@/components/ErrorPage')
+      component: () => import('@/components/ErrorPage.vue')
     },
     {
       path: '/',
-      component: () => import('@/components/Login')
+      component: () => import('@/components/Login.vue')
     },
     {
       path: '/:appdirectory',
-      component: () => import('@/components/Login')
+      component: () => import('@/components/Login.vue')
     },
     {
       path: '/:appdirectory/signup',
-      component: () => import('@/components/Signup')
+      component: () => import('@/components/Signup.vue')
     },
     {
       path: '/:appdirectory/dashboard',
-      component: () => import('@/components/Dashboard')
+      component: () => import('@/components/Dashboard.vue')
     },
-    { path: '*', component: () => import('@/components/ErrorPage') }
+    { path: '/:pathMatch(.*)*', component: () => import('@/components/ErrorPage.vue') }
   ]
 })
